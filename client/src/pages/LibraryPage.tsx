@@ -214,23 +214,30 @@ export default function LibraryPage() {
       </div>
 
       {/* Category filter chips */}
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setSelectedCategory(cat)}
-            className={cn(
-              'shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
-              selectedCategory === cat
-                ? 'bg-primary-600 text-text-inverse'
-                : 'bg-surface-hover text-text-muted hover:text-text',
-            )}
-          >
-            {cat}
-          </button>
-        ))}
+      <div className="relative mb-6 -mx-4">
+        {/* Left fade */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-4 bg-gradient-to-r from-surface-alt to-transparent" />
+        {/* Right fade */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-surface-alt to-transparent" />
+
+        <div className="flex gap-2 overflow-x-auto px-4 py-1 scrollbar-none">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCategory(cat)}
+              className={cn(
+                'shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1',
+                selectedCategory === cat
+                  ? 'bg-primary-600 text-text-inverse shadow-sm'
+                  : 'bg-surface text-text-muted border border-border hover:border-primary-300 hover:text-text',
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Card grid or filtered empty state */}
