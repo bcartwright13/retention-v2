@@ -190,7 +190,7 @@ export default function StudyPage() {
       <Container className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center py-16 text-center motion-safe:animate-[editorial-fade-up_560ms_var(--ease-editorial)_both]">
           <div className="mb-8"><CheckmarkStroke /></div>
-          <p className="small-caps text-ink-muted mb-4">§ &nbsp; caught up</p>
+          <p className="small-caps text-ink-muted mb-4">all caught up</p>
           <h2 className="font-display text-4xl md:text-5xl text-ink mb-4">
             Nothing due, just yet.
           </h2>
