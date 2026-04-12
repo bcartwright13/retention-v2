@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { ReviewPerformance } from '../types/card';
 import { useDueCards } from '../hooks/useDueCards';
@@ -6,56 +6,82 @@ import { useCards } from '../hooks/useCards';
 import { getIntervalHint, formatRelativeDate } from '../lib/scheduler';
 import { cn } from '../lib/cn';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { CardSurface } from '../components/ui/CardSurface';
+import { LevelIndicator } from '../components/ui/LevelIndicator';
+import { Rule } from '../components/ui/Rule';
 import { Spinner } from '../components/ui/Spinner';
+import { StatLine } from '../components/ui/StatLine';
 import { Container } from '../components/layout/Container';
+import { CardContent } from '../components/cards/CardContent';
+import { useStreakStore } from '../stores/streakStore';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Assessments — ordered left-to-right as 1/2/3/4.
+// "Got it!" is marked `emphasized` and rendered larger / filled.
+// ─────────────────────────────────────────────────────────────────────────
+type Tone = 'forgot' | 'struggled' | 'gotit' | 'mastered';
 
 const ASSESSMENTS: {
   performance: ReviewPerformance;
+  key: string;
   label: string;
-  bg: string;
-  hover: string;
+  tone: Tone;
+  emphasized?: boolean;
 }[] = [
-  { performance: 'forgot', label: 'Forgot', bg: 'bg-forgot', hover: 'hover:bg-forgot-hover' },
-  { performance: 'struggled', label: 'Struggled', bg: 'bg-struggled', hover: 'hover:bg-struggled-hover' },
-  { performance: 'gotit', label: 'Got it!', bg: 'bg-gotit', hover: 'hover:bg-gotit-hover' },
-  { performance: 'mastered', label: 'Mastered', bg: 'bg-mastered', hover: 'hover:bg-mastered-hover' },
+  { performance: 'forgot', key: '1', label: 'forgot', tone: 'forgot' },
+  { performance: 'struggled', key: '2', label: 'struggled', tone: 'struggled' },
+  { performance: 'gotit', key: '3', label: 'got it', tone: 'gotit', emphasized: true },
+  { performance: 'mastered', key: '4', label: 'mastered', tone: 'mastered' },
 ];
 
-function CheckmarkIcon({ className }: { className?: string }) {
+const toneText: Record<Tone, string> = {
+  forgot: 'text-forgot',
+  struggled: 'text-struggled',
+  gotit: 'text-gotit',
+  mastered: 'text-mastered',
+};
+const toneBorder: Record<Tone, string> = {
+  forgot: 'border-forgot/40 hover:border-forgot',
+  struggled: 'border-struggled/40 hover:border-struggled',
+  gotit: 'border-gotit hover:border-gotit',
+  mastered: 'border-mastered/40 hover:border-mastered',
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// CheckmarkStroke — animated stroke-drawn serif-style check on completion.
+// ─────────────────────────────────────────────────────────────────────────
+function CheckmarkStroke() {
   return (
     <svg
-      className={cn('h-16 w-16', className)}
-      viewBox="0 0 64 64"
+      width="88"
+      height="88"
+      viewBox="0 0 88 88"
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+      className="text-ochre"
+      aria-hidden="true"
     >
-      <circle cx="32" cy="32" r="32" className="fill-gotit" />
+      <circle
+        cx="44"
+        cy="44"
+        r="42"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeDasharray="264"
+        strokeDashoffset="264"
+        className="motion-safe:animate-[editorial-stroke-draw_720ms_var(--ease-editorial)_both]"
+        style={{ ['--stroke-length' as string]: '264' }}
+      />
       <path
-        d="M20 33l8 8 16-16"
-        stroke="white"
-        strokeWidth="4"
+        d="M26 46 L40 58 L62 32"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        strokeDasharray="80"
+        strokeDashoffset="80"
+        className="motion-safe:animate-[editorial-stroke-draw_520ms_var(--ease-editorial)_both]"
+        style={{ ['--stroke-length' as string]: '80', animationDelay: '400ms' }}
       />
     </svg>
-  );
-}
-
-function LevelDots({ level }: { level: number }) {
-  return (
-    <div className="flex items-center gap-1" aria-label={`Level ${level} of 5`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <span
-          key={i}
-          className={cn(
-            'inline-block h-2 w-2 rounded-full',
-            i < level ? 'bg-primary-500' : 'bg-surface-hover',
-          )}
-        />
-      ))}
-    </div>
   );
 }
 
@@ -69,6 +95,9 @@ function useNextReviewInfo(cards: { nextReview: string }[]) {
   return formatRelativeDate(futureCards[0].nextReview);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Page
+// ─────────────────────────────────────────────────────────────────────────
 export default function StudyPage() {
   const { dueCards, isLoading, reviewCard } = useDueCards();
   const { cards } = useCards();
@@ -76,8 +105,14 @@ export default function StudyPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Key used to trigger card transition animation
   const [cardKey, setCardKey] = useState(0);
+  const [sessionTally, setSessionTally] = useState<Record<ReviewPerformance, number>>({
+    forgot: 0,
+    struggled: 0,
+    gotit: 0,
+    mastered: 0,
+  });
+  const recordReview = useStreakStore((s) => s.recordReview);
 
   const nextReviewText = useNextReviewInfo(cards);
 
@@ -93,6 +128,8 @@ export default function StudyPage() {
       setIsSubmitting(true);
       try {
         await reviewCard(card.id, performance);
+        setSessionTally((t) => ({ ...t, [performance]: t[performance] + 1 }));
+        recordReview();
       } finally {
         setIsSubmitting(false);
         setIsRevealed(false);
@@ -100,10 +137,45 @@ export default function StudyPage() {
         setCardKey((prev) => prev + 1);
       }
     },
-    [currentIndex, dueCards, isSubmitting, reviewCard],
+    [currentIndex, dueCards, isSubmitting, reviewCard, recordReview],
   );
 
-  // Loading state
+  // ── Keyboard shortcuts ───────────────────────────────────────────────
+  useEffect(() => {
+    if (isLoading) return;
+    if (dueCards.length === 0 || currentIndex >= dueCards.length) return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (!isRevealed) {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          handleReveal();
+        }
+        return;
+      }
+      const map: Record<string, ReviewPerformance> = {
+        '1': 'forgot',
+        '2': 'struggled',
+        '3': 'gotit',
+        '4': 'mastered',
+      };
+      const perf = map[e.key];
+      if (perf) {
+        e.preventDefault();
+        handleAssessment(perf);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isRevealed, handleReveal, handleAssessment, isLoading, dueCards.length, currentIndex]);
+
+  const sessionReviewed = useMemo(
+    () => Object.values(sessionTally).reduce((a, b) => a + b, 0),
+    [sessionTally],
+  );
+
+  // ── Loading ──────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <Container className="flex items-center justify-center min-h-[60vh]">
@@ -112,166 +184,215 @@ export default function StudyPage() {
     );
   }
 
-  // Empty state — no due cards at all
+  // ── Empty — nothing due ──────────────────────────────────────────────
   if (dueCards.length === 0) {
     return (
       <Container className="min-h-[60vh] flex items-center justify-center">
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <div className="mb-4">
-            <CheckmarkIcon />
-          </div>
-          <h2 className="text-lg font-semibold text-text mb-1">You're all caught up!</h2>
-          <p className="text-sm text-text-muted mb-2 max-w-sm">
-            No cards due for review right now.
-          </p>
-          <p className="text-sm text-text-muted mb-6 max-w-sm">
-            {cards.length > 0 ? (
-              <>
-                {cards.length} card{cards.length !== 1 ? 's' : ''} in your library
-                {nextReviewText && <> &middot; Next review: {nextReviewText}</>}
-              </>
-            ) : (
-              'Add some cards to get started.'
-            )}
+        <div className="flex flex-col items-center py-16 text-center motion-safe:animate-[editorial-fade-up_560ms_var(--ease-editorial)_both]">
+          <div className="mb-8"><CheckmarkStroke /></div>
+          <p className="small-caps text-ink-muted mb-4">§ &nbsp; caught up</p>
+          <h2 className="font-display text-4xl md:text-5xl text-ink mb-4">
+            Nothing due, just yet.
+          </h2>
+          <p className="font-serif-body italic text-ink-soft max-w-md mb-10">
+            {cards.length > 0
+              ? <>Your library holds <span className="tabular not-italic">{cards.length}</span> card{cards.length !== 1 ? 's' : ''}{nextReviewText && <> — the next will surface {nextReviewText.toLowerCase()}.</>}</>
+              : 'Begin by writing your first card.'}
           </p>
           <Link to="/">
-            <Button variant="primary">Back to Library</Button>
+            <Button variant="secondary">back to library</Button>
           </Link>
         </div>
       </Container>
     );
   }
 
-  // Completion state — all due cards reviewed
+  // ── Completion — all done ────────────────────────────────────────────
   if (currentIndex >= dueCards.length) {
     return (
       <Container className="min-h-[60vh] flex items-center justify-center">
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <div className="mb-4">
-            <CheckmarkIcon />
-          </div>
-          <h2 className="text-lg font-semibold text-text mb-1">You're all caught up!</h2>
-          <p className="text-sm text-text-muted mb-2 max-w-sm">
-            You reviewed {dueCards.length} card{dueCards.length !== 1 ? 's' : ''}. Great work!
-          </p>
-          <p className="text-sm text-text-muted mb-6 max-w-sm">
-            {cards.length} card{cards.length !== 1 ? 's' : ''} in your library
-            {nextReviewText && <> &middot; Next review: {nextReviewText}</>}
-          </p>
+        <div className="flex flex-col items-center py-16 text-center motion-safe:animate-[editorial-fade-up_560ms_var(--ease-editorial)_both]">
+          <div className="mb-8"><CheckmarkStroke /></div>
+          <p className="small-caps text-ochre mb-4">§ &nbsp; session complete</p>
+          <h2 className="font-display text-4xl md:text-5xl text-ink mb-8">
+            {dueCards.length} card{dueCards.length !== 1 ? 's' : ''} reviewed.
+          </h2>
+
+          <Rule className="w-24 mb-8" />
+
+          <StatLine
+            stats={[
+              { label: 'forgot', value: sessionTally.forgot, tone: 'forgot' },
+              { label: 'struggled', value: sessionTally.struggled, tone: 'struggled' },
+              { label: 'got it', value: sessionTally.gotit, tone: 'gotit' },
+              { label: 'mastered', value: sessionTally.mastered, tone: 'mastered' },
+            ]}
+            className="mb-10"
+          />
+
+          {nextReviewText && (
+            <p className="font-serif-body italic text-ink-soft mb-8">
+              next review {nextReviewText.toLowerCase()}
+            </p>
+          )}
+
           <Link to="/">
-            <Button variant="primary">Back to Library</Button>
+            <Button variant="secondary">back to library</Button>
           </Link>
         </div>
       </Container>
     );
   }
 
-  // Active study
+  // ── Active study ─────────────────────────────────────────────────────
   const card = dueCards[currentIndex];
-  const progress = ((currentIndex) / dueCards.length) * 100;
+  const progress = (currentIndex / dueCards.length) * 100;
 
   return (
-    <Container className="py-6">
-      {/* Progress indicator */}
-      <div className="mb-6">
-        <p className="text-sm text-text-muted mb-2">
-          Card {currentIndex + 1} of {dueCards.length}
-        </p>
-        <div className="h-1 w-full rounded-full bg-surface-hover overflow-hidden">
+    <Container className="py-8 md:py-12">
+      {/* Running head: page counter + progress hairline */}
+      <div className="mb-10 md:mb-14">
+        <div className="flex items-baseline justify-between mb-3">
+          <p className="small-caps text-ink-muted">
+            <span className="tabular">{String(currentIndex + 1).padStart(2, '0')}</span>
+            &nbsp;/&nbsp;
+            <span className="tabular">{String(dueCards.length).padStart(2, '0')}</span>
+            &nbsp;&middot;&nbsp;study
+          </p>
+          {sessionReviewed > 0 && (
+            <p className="small-caps-sm text-ink-muted tabular">
+              {sessionReviewed} reviewed
+            </p>
+          )}
+        </div>
+        <div className="h-px w-full bg-rule relative overflow-hidden">
           <div
-            className="h-full bg-primary-500 rounded-full transition-all duration-300 ease-out"
+            className="absolute inset-y-0 left-0 bg-ochre transition-all duration-[520ms] [transition-timing-function:var(--ease-editorial)]"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
-      {/* Card with transition */}
-      <div
+      {/* Card */}
+      <article
         key={cardKey}
-        className={cn(
-          'max-w-xl mx-auto',
-          'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2',
-        )}
-        style={{
-          animation: 'studyCardIn 250ms ease-out both',
-        }}
+        className="motion-safe:animate-[editorial-fade-up_440ms_var(--ease-editorial)_both]"
       >
-        <CardSurface className="p-6">
-          {/* Top row: category badge + level dots */}
-          <div className="flex items-center justify-between mb-4">
-            <Badge variant="primary">{card.category}</Badge>
-            <LevelDots level={card.level} />
+        {/* Category + level, set on a baseline */}
+        <header className="flex items-center justify-between mb-8">
+          <span className="small-caps text-ochre">{card.category}</span>
+          <LevelIndicator level={card.level} />
+        </header>
+
+        {/* Title — the front of the card, always visible */}
+        <h1 className="font-display text-[2.5rem] md:text-[4rem] leading-[1.02] text-ink mb-10 md:mb-14 [text-wrap:balance]">
+          {card.title}
+        </h1>
+
+        {/* Answer region */}
+        {isRevealed ? (
+          <div
+            key={`reveal-${cardKey}`}
+            className="mb-10 motion-safe:animate-[editorial-settle_480ms_var(--ease-editorial)_both]"
+          >
+            <Rule label="answer" animated className="mb-8" />
+            <CardContent content={card.content} />
           </div>
+        ) : (
+          <div className="mb-10">
+            <Rule className="mb-8" />
+            <p className="font-serif italic text-ink-muted">
+              — press{' '}
+              <kbd className="small-caps inline-block px-2 py-0.5 border border-rule-strong rounded-sm text-ink">
+                space
+              </kbd>{' '}
+              or tap reveal to see the answer
+            </p>
+          </div>
+        )}
 
-          {/* Title — always visible */}
-          <h2 className="text-xl font-semibold text-text">{card.title}</h2>
-
-          {/* Content — only when revealed */}
-          {isRevealed && (
-            <div className="motion-safe:animate-in motion-safe:fade-in">
-              <div className="border-t border-border my-4" />
-              <p className="text-text leading-relaxed whitespace-pre-wrap">{card.content}</p>
-            </div>
-          )}
-        </CardSurface>
-
-        {/* Actions below card */}
-        <div className="mt-6">
-          {!isRevealed ? (
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full"
-              onClick={handleReveal}
-            >
-              Show Answer
-            </Button>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {ASSESSMENTS.map(({ performance, label, bg, hover }) => (
-                <button
-                  key={performance}
-                  onClick={() => handleAssessment(performance)}
-                  disabled={isSubmitting}
-                  className={cn(
-                    bg,
-                    hover,
-                    'text-white font-medium rounded-md min-h-[56px] px-3 py-2',
-                    'flex flex-col items-center justify-center gap-0.5',
-                    'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-                    'disabled:opacity-50 disabled:pointer-events-none',
-                  )}
-                >
-                  <span className="text-sm font-semibold">{label}</span>
-                  <span className="text-xs opacity-90">
-                    {getIntervalHint(performance, card.level)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Inline keyframes for card entrance animation (respects prefers-reduced-motion) */}
-      <style>{`
-        @keyframes studyCardIn {
-          from {
-            opacity: 0;
-            transform: translateY(8px) scale(0.98);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          @keyframes studyCardIn {
-            from { opacity: 1; transform: none; }
-            to { opacity: 1; transform: none; }
-          }
-        }
-      `}</style>
+        {/* Actions */}
+        {!isRevealed ? (
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={handleReveal}
+            className="w-full md:w-auto md:min-w-[240px]"
+          >
+            reveal answer
+          </Button>
+        ) : (
+          <AssessmentRow
+            onSelect={handleAssessment}
+            disabled={isSubmitting}
+            cardLevel={card.level}
+          />
+        )}
+      </article>
     </Container>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// AssessmentRow — "Got it" is emphasized (larger, filled ink). Others are
+// quieter outlined buttons. Each shows: numeral · label · interval.
+// ─────────────────────────────────────────────────────────────────────────
+interface AssessmentRowProps {
+  onSelect: (p: ReviewPerformance) => void;
+  disabled: boolean;
+  cardLevel: number;
+}
+
+function AssessmentRow({ onSelect, disabled, cardLevel }: AssessmentRowProps) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {ASSESSMENTS.map(({ performance, key, label, tone, emphasized }) => (
+        <button
+          key={performance}
+          type="button"
+          onClick={() => onSelect(performance)}
+          disabled={disabled}
+          className={cn(
+            'group relative flex flex-col items-start justify-between text-left',
+            'min-h-[88px] px-4 py-3 border bg-paper rounded-sm',
+            'transition-all duration-300 [transition-timing-function:var(--ease-editorial)]',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ochre focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
+            'disabled:opacity-40 disabled:pointer-events-none',
+            'hover:-translate-y-px',
+            toneBorder[tone],
+            emphasized && 'md:col-span-1 md:scale-[1.02] ring-0 [border-width:1.5px]',
+          )}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span
+              className={cn(
+                'font-display text-xl tabular leading-none',
+                emphasized ? toneText[tone] : 'text-ink-muted',
+              )}
+            >
+              {key}
+            </span>
+            <span className="small-caps-sm text-ink-muted tabular">
+              {getIntervalHint(performance, cardLevel)}
+            </span>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span
+              className={cn(
+                'font-serif text-lg md:text-xl leading-none',
+                emphasized ? cn('italic', toneText[tone]) : 'text-ink',
+              )}
+            >
+              {label}
+            </span>
+            {emphasized && (
+              <span aria-hidden="true" className={cn('text-xs', toneText[tone])}>
+                ●
+              </span>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
   );
 }

@@ -7,13 +7,17 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
 }
 
+/**
+ * Editorial input — no box, only a baseline rule. Label floats above in
+ * small caps; focus thickens the rule to 2px ochre.
+ */
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, helperText, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-text">
+          <label htmlFor={inputId} className="small-caps block text-ink-muted">
             {label}
           </label>
         )}
@@ -21,32 +25,34 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            'block w-full rounded-md border px-3 py-2 text-sm',
-            'bg-surface text-text placeholder:text-text-muted',
-            'transition-colors min-h-[44px]',
-            'focus:outline-none focus:ring-2 focus:ring-offset-0',
+            'block w-full bg-transparent px-0 py-2.5 text-base font-serif-body text-ink placeholder:text-ink-muted/60',
+            'border-0 border-b transition-colors duration-300 [transition-timing-function:var(--ease-editorial)]',
+            'focus:outline-none focus:ring-0',
             error
-              ? 'border-forgot focus:ring-forgot/30'
-              : 'border-border focus:border-border-focus focus:ring-primary-500/30',
+              ? 'border-b-forgot focus:border-b-forgot'
+              : 'border-b-rule focus:border-b-ochre focus:[border-bottom-width:2px]',
+            'min-h-[44px]',
             className,
           )}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
+          aria-describedby={
+            error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
+          }
           {...props}
         />
         {error && (
-          <p id={`${inputId}-error`} className="text-sm text-forgot" role="alert">
+          <p id={`${inputId}-error`} className="small-caps text-forgot" role="alert">
             {error}
           </p>
         )}
         {helperText && !error && (
-          <p id={`${inputId}-helper`} className="text-sm text-text-muted">
+          <p id={`${inputId}-helper`} className="small-caps text-ink-muted">
             {helperText}
           </p>
         )}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = 'Input';

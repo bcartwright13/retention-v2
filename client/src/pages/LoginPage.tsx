@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-surface-alt">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <Spinner size="lg" />
       </div>
     );
@@ -21,84 +21,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center bg-surface-alt px-4">
-      <div className="w-full max-w-sm flex flex-col items-center gap-8">
-        {/* Brand */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center gap-3">
-            {/* Lightbulb icon */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-10 w-10 text-primary-600"
-            >
-              <path d="M9 18h6" />
-              <path d="M10 22h4" />
-              <path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z" />
-            </svg>
-            <h1 className="text-4xl font-bold text-primary-600 tracking-tight">
-              Recall
+    <div className="relative min-h-dvh flex flex-col bg-paper text-ink overflow-hidden">
+      {/* Decorative folio marks in the margin — editorial touch */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 flex items-center justify-between px-6 md:px-12"
+      >
+        <span className="small-caps-sm text-ink-muted">MMXXVI</span>
+        <span className="small-caps-sm text-ink-muted">vol. I &middot; no. 1</span>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center px-6 py-20">
+        <div className="w-full max-w-md">
+          {/* Brand lockup */}
+          <div
+            className="mb-2 motion-safe:animate-[editorial-fade-up_600ms_var(--ease-editorial)_both]"
+            style={{ animationDelay: '0ms' }}
+          >
+            <h1 className="font-display text-[6rem] md:text-[8rem] text-ink leading-[0.85] flex items-baseline">
+              <span>recall</span>
+              <span className="text-ochre">.</span>
             </h1>
           </div>
-          <p className="text-text-muted text-center">
-            Spaced repetition for everyday learning
-          </p>
-        </div>
 
-        {/* Sign-in buttons */}
-        <div className="w-full flex flex-col gap-3">
-          <Button
-            variant="secondary"
-            size="lg"
-            className="w-full gap-3"
-            onClick={() => {
-              window.location.href = '/api/auth/google';
-            }}
+          {/* Tagline */}
+          <div
+            className="mb-10 motion-safe:animate-[editorial-fade-up_600ms_var(--ease-editorial)_both]"
+            style={{ animationDelay: '120ms' }}
           >
-            {/* Google "G" icon */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="h-5 w-5 shrink-0"
+            <p className="font-serif-body italic text-lg text-ink-soft max-w-md leading-relaxed">
+              a commonplace book for ideas worth remembering —
+              <br />
+              set in paper and ink, studied at your own pace.
+            </p>
+          </div>
+
+          {/* Hairline rule */}
+          <div
+            className="h-px w-24 bg-ochre mb-10 origin-left motion-safe:animate-[editorial-draw-rule_700ms_var(--ease-editorial)_both]"
+            style={{ animationDelay: '280ms' }}
+            aria-hidden="true"
+          />
+
+          {/* Sign-in */}
+          <div
+            className="flex flex-col gap-3 motion-safe:animate-[editorial-fade-up_600ms_var(--ease-editorial)_both]"
+            style={{ animationDelay: '380ms' }}
+          >
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full justify-center"
+              onClick={() => {
+                window.location.href = '/api/auth/google';
+              }}
             >
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"
-                fill="#4285F4"
-              />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
-              />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335"
-              />
-            </svg>
-            Sign in with Google
-          </Button>
+              <span>enter with google</span>
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="lg"
-            className="w-full"
-            onClick={async () => {
-              await useAuthStore.getState().login();
-              navigate('/');
-            }}
-          >
-            Continue as Demo
-          </Button>
+            <Button
+              variant="ghost"
+              size="lg"
+              className="w-full justify-center"
+              onClick={async () => {
+                await useAuthStore.getState().login();
+                navigate('/');
+              }}
+            >
+              continue as a guest
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Colophon footer */}
+      <footer
+        aria-hidden="true"
+        className="pointer-events-none px-6 md:px-12 pb-6 flex items-end justify-between"
+      >
+        <span className="small-caps-sm text-ink-muted">spaced repetition &middot; lifestyle learning</span>
+        <span className="font-serif italic text-sm text-ink-muted">— B.C.</span>
+      </footer>
     </div>
   );
 }

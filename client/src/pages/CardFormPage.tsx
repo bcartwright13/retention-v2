@@ -6,9 +6,9 @@ import { Container } from '../components/layout/Container';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { CardSurface } from '../components/ui/CardSurface';
 import { Spinner } from '../components/ui/Spinner';
+import { Rule } from '../components/ui/Rule';
+import { CardContent } from '../components/cards/CardContent';
 
 export default function CardFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,17 +22,14 @@ export default function CardFormPage() {
     [id, cards],
   );
 
-  // Form state
   const [title, setTitle] = useState(existingCard?.title ?? '');
   const [category, setCategory] = useState(existingCard?.category ?? '');
   const [content, setContent] = useState(existingCard?.content ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
-
-  // Validation errors
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
 
-  // Sync form when card loads in edit mode
+  // Hydrate form when the edit card finally arrives
   const [syncedCardId, setSyncedCardId] = useState<string | null>(null);
   if (existingCard && syncedCardId !== existingCard.id) {
     setTitle(existingCard.title);
@@ -41,7 +38,6 @@ export default function CardFormPage() {
     setSyncedCardId(existingCard.id);
   }
 
-  // Unique categories for datalist autocomplete
   const uniqueCategories = useMemo(() => {
     const cats = new Set(cards.map((c) => c.category).filter(Boolean));
     return Array.from(cats).sort();
@@ -49,8 +45,8 @@ export default function CardFormPage() {
 
   function validate(): boolean {
     const next: { title?: string; content?: string } = {};
-    if (!title.trim()) next.title = 'Title is required';
-    if (!content.trim()) next.content = 'Content is required';
+    if (!title.trim()) next.title = 'a title is required';
+    if (!content.trim()) next.content = 'content is required';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -69,84 +65,91 @@ export default function CardFormPage() {
     try {
       if (isEditMode && id) {
         await updateCard(id, input);
-        addToast('Card updated');
+        addToast('Card updated.');
       } else {
         await createCard(input);
-        addToast('Card created');
+        addToast('Card added to the library.');
       }
       navigate('/');
     } catch {
-      // Error is surfaced via the store
       setIsSaving(false);
     }
   }
 
-  // --- Edge case: edit mode, cards loaded, but card not found ---
+  // ── Edge: edit mode, card not found ─────────────────────────────────
   if (isEditMode && !isLoading && cards.length > 0 && !existingCard) {
     return (
-      <Container className="py-8">
-        <CardSurface className="p-8 text-center">
-          <h2 className="text-lg font-semibold text-text mb-2">Card not found</h2>
-          <p className="text-sm text-text-muted mb-4">
-            The card you're looking for doesn't exist or has been deleted.
-          </p>
-          <Link
-            to="/"
-            className="text-sm font-medium text-primary-600 hover:text-primary-700"
-          >
-            Back to Library
-          </Link>
-        </CardSurface>
+      <Container className="py-16 text-center">
+        <p className="small-caps text-ochre mb-4">§ &nbsp; missing</p>
+        <h2 className="font-display text-4xl text-ink mb-4">Card not found.</h2>
+        <p className="font-serif-body italic text-ink-soft mb-8">
+          This page has been removed, or was never written.
+        </p>
+        <Link to="/" className="small-caps text-ochre hover:text-ochre-ink transition-colors">
+          ← back to library
+        </Link>
       </Container>
     );
   }
 
-  // --- Loading state for edit mode ---
   if (isEditMode && isLoading && !existingCard) {
     return (
-      <Container className="py-8 flex justify-center">
+      <Container className="py-16 flex justify-center">
         <Spinner size="lg" />
       </Container>
     );
   }
 
   const resolvedCategory = category.trim() || 'General';
+  const resolvedTitle = title.trim() || 'Untitled';
 
   return (
     <>
-      <Container className="py-8 pb-28">
-        <h1 className="text-2xl font-bold text-text mb-6">
-          {isEditMode ? 'Edit Card' : 'New Card'}
-        </h1>
+      <Container className="pb-32 md:pb-24">
+        {/* Running head */}
+        <header className="mb-10">
+          <p className="small-caps text-ink-muted mb-2">
+            {isEditMode ? '§ editing' : '§ new entry'}
+          </p>
+          <h1 className="font-display text-5xl md:text-6xl text-ink leading-none">
+            {isEditMode ? 'Edit card' : 'New card'}
+          </h1>
+          <p className="font-serif-body italic text-ink-soft mt-3">
+            — one idea, set in its own words.
+          </p>
+        </header>
+
+        <Rule className="mb-10" />
 
         {isPreviewing ? (
-          /* ---- Preview mode ---- */
-          <div className="space-y-4">
-            <CardSurface className="p-6">
-              <h2 className="text-lg font-semibold text-text mb-2">
-                {title.trim() || 'Untitled'}
+          // ── Preview ───────────────────────────────────────────────
+          <div>
+            <p className="small-caps text-ochre mb-6">preview</p>
+            <article>
+              <header className="flex items-baseline justify-between mb-6">
+                <span className="small-caps text-ochre">{resolvedCategory}</span>
+              </header>
+              <h2 className="font-display text-4xl md:text-5xl text-ink leading-[1.05] mb-8 [text-wrap:balance]">
+                {resolvedTitle}
               </h2>
-              <Badge variant="primary">{resolvedCategory}</Badge>
-              <hr className="my-4 border-border" />
-              <p className="text-sm text-text whitespace-pre-wrap">
-                {content.trim() || 'No content yet.'}
-              </p>
-            </CardSurface>
+              <Rule label="answer" className="mb-6" />
+              <CardContent content={content.trim() || 'No content yet.'} />
+            </article>
 
             <button
               type="button"
               onClick={() => setIsPreviewing(false)}
-              className="text-sm font-medium text-primary-600 hover:text-primary-700"
+              className="small-caps mt-12 text-ochre hover:text-ochre-ink transition-colors"
             >
-              Back to editing
+              ← back to editing
             </button>
           </div>
         ) : (
-          /* ---- Form mode ---- */
-          <form id="card-form" onSubmit={handleSubmit} className="space-y-5">
+          // ── Form ──────────────────────────────────────────────────
+          <form id="card-form" onSubmit={handleSubmit} className="space-y-10">
             <Input
-              label="Title"
-              placeholder="e.g., Java: String to Int"
+              label="title"
+              placeholder="a word, a phrase, a question"
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
@@ -158,8 +161,8 @@ export default function CardFormPage() {
 
             <div>
               <Input
-                label="Category"
-                placeholder="e.g., Programming"
+                label="category"
+                placeholder="vocabulary · code · quotes · …"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 list="category-options"
@@ -172,8 +175,8 @@ export default function CardFormPage() {
             </div>
 
             <Textarea
-              label="Content"
-              placeholder="The answer or detail you want to remember..."
+              label="content"
+              placeholder="the definition, the code, the passage…"
               value={content}
               onChange={(e) => {
                 setContent(e.target.value);
@@ -184,41 +187,46 @@ export default function CardFormPage() {
               className="min-h-[200px]"
             />
 
+            <p className="small-caps-sm text-ink-muted">
+              markdown supported: **bold**, *italic*, `code`, and fenced code blocks
+            </p>
+
             <button
               type="button"
               onClick={() => setIsPreviewing(true)}
-              className="text-sm font-medium text-primary-600 hover:text-primary-700"
+              className="small-caps text-ochre hover:text-ochre-ink transition-colors"
             >
-              Preview card
+              preview card →
             </button>
           </form>
         )}
       </Container>
 
-      {/* ---- Sticky footer ---- */}
-      <div className="fixed bottom-0 inset-x-0 border-t border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
-        <Container className="flex items-center justify-end gap-3 py-3">
-          <Button
+      {/* Sticky footer — hairline rule + text-link actions */}
+      <div className="fixed bottom-0 inset-x-0 bg-paper/95 backdrop-blur border-t border-rule z-10">
+        <Container className="flex items-center justify-between gap-3 py-4">
+          <button
             type="button"
-            variant="secondary"
             onClick={() => navigate(-1)}
+            className="small-caps text-ink-muted hover:text-ink transition-colors"
           >
-            Cancel
-          </Button>
+            ← cancel
+          </button>
           <Button
             type="submit"
             form="card-form"
             variant="primary"
             disabled={isSaving || isPreviewing}
-            onClick={isPreviewing ? undefined : undefined}
           >
             {isSaving ? (
               <span className="flex items-center gap-2">
-                <Spinner size="sm" className="text-text-inverse" />
-                Saving...
+                <Spinner size="sm" />
+                saving
               </span>
+            ) : isEditMode ? (
+              'save changes'
             ) : (
-              'Save'
+              'add to library'
             )}
           </Button>
         </Container>

@@ -8,18 +8,23 @@ interface BadgeProps {
   className?: string;
 }
 
+/**
+ * Editorial "badge" — really just a small-caps label. No pill, no fill.
+ * Category metadata, kept quiet. The variant prop is preserved for
+ * backwards compatibility but only tints the text color.
+ */
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-surface-hover text-text-muted',
-  primary: 'bg-primary-100 text-primary-700',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-amber-100 text-amber-700',
+  default: 'text-ink-muted',
+  primary: 'text-ochre',
+  success: 'text-gotit',
+  warning: 'text-struggled',
 };
 
 function Badge({ children, variant = 'default', className }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+        'small-caps inline-flex items-center',
         variantStyles[variant],
         className,
       )}

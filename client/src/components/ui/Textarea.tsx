@@ -6,13 +6,17 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: string;
 }
 
+/**
+ * Editorial textarea — baseline rule, serif body type, generous leading.
+ * Feels like writing into a notebook rather than filling a field.
+ */
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, id, ...props }, ref) => {
     const textareaId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {label && (
-          <label htmlFor={textareaId} className="block text-sm font-medium text-text">
+          <label htmlFor={textareaId} className="small-caps block text-ink-muted">
             {label}
           </label>
         )}
@@ -20,13 +24,13 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={textareaId}
           className={cn(
-            'block w-full rounded-md border px-3 py-2 text-sm',
-            'bg-surface text-text placeholder:text-text-muted',
-            'transition-colors min-h-[120px] resize-y',
-            'focus:outline-none focus:ring-2 focus:ring-offset-0',
+            'block w-full bg-transparent px-0 py-3 font-serif-body text-base text-ink placeholder:text-ink-muted/60',
+            'border-0 border-b transition-colors duration-300 [transition-timing-function:var(--ease-editorial)]',
+            'focus:outline-none focus:ring-0 resize-y',
             error
-              ? 'border-forgot focus:ring-forgot/30'
-              : 'border-border focus:border-border-focus focus:ring-primary-500/30',
+              ? 'border-b-forgot focus:border-b-forgot'
+              : 'border-b-rule focus:border-b-ochre focus:[border-bottom-width:2px]',
+            'min-h-[160px]',
             className,
           )}
           aria-invalid={error ? true : undefined}
@@ -34,13 +38,13 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p id={`${textareaId}-error`} className="text-sm text-forgot" role="alert">
+          <p id={`${textareaId}-error`} className="small-caps text-forgot" role="alert">
             {error}
           </p>
         )}
       </div>
     );
-  }
+  },
 );
 
 Textarea.displayName = 'Textarea';

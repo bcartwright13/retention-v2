@@ -5,9 +5,9 @@ import { ToastContainer } from '../ui/Toast';
 
 export default function AppShell() {
   return (
-    <div className="min-h-screen bg-surface-alt">
+    <div className="min-h-screen bg-paper text-ink">
       <Header />
-      <main className="pb-20 md:pb-6 pt-4">
+      <main className="pb-24 md:pb-12 pt-6 md:pt-10">
         <Outlet />
       </main>
       <BottomNav />

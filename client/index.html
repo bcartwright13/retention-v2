@@ -8,9 +8,33 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Recall" />
-    <meta name="theme-color" content="#4f46e5" />
-    <meta name="description" content="Recall - Spaced Repetition for Lifestyle Learning" />
+    <meta name="theme-color" content="#FAF7F2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14110D" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Recall — a commonplace book for ideas worth remembering." />
     <title>Recall</title>
+
+    <!-- Theme bootstrap: set data-theme before paint to avoid FOUC -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('recall-theme') || 'system';
+          var resolved = stored === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : stored;
+          document.documentElement.setAttribute('data-theme', resolved);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+
+    <!-- Editorial type: Fraunces (display serif), Inter Tight (UI sans), JetBrains Mono (code) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..800,0..100,0..1&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

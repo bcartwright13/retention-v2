@@ -1,0 +1,96 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Editorial typography utilities
+   Fraunces (display serif) + Inter Tight (UI sans) + JetBrains Mono
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  /* ─── Display type (Fraunces with optical sizing) ──────────────── */
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 0;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  .font-display-md {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-variation-settings: 'opsz' 72, 'SOFT' 30, 'WONK' 0;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+
+  .font-display-sm {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-variation-settings: 'opsz' 24, 'SOFT' 50, 'WONK' 0;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    line-height: 1.2;
+  }
+
+  /* ─── Body serif (Fraunces for reading passages) ───────────────── */
+  .font-serif-body {
+    font-family: var(--font-serif);
+    font-optical-sizing: auto;
+    font-variation-settings: 'opsz' 14, 'SOFT' 50, 'WONK' 0;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  /* ─── UI sans (Inter Tight) ────────────────────────────────────── */
+  .font-ui {
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+  }
+
+  /* ─── Small caps label (the editorial workhorse) ───────────────── */
+  .small-caps {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .small-caps-sm {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.625rem; /* 10px */
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .small-caps-lg {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem; /* 12px */
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  /* ─── Tabular numerals (for intervals, counts, levels) ─────────── */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum', 'lnum';
+  }
+
+  /* ─── Old-style figures (for inline prose numerals) ────────────── */
+  .oldstyle {
+    font-variant-numeric: oldstyle-nums;
+    font-feature-settings: 'onum';
+  }
+
+  /* ─── Monospace (code blocks in card content) ──────────────────── */
+  .font-mono-code {
+    font-family: var(--font-mono);
+    font-feature-settings: 'calt', 'liga';
+  }
+}

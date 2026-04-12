@@ -6,28 +6,48 @@ interface SpinnerProps {
 }
 
 const sizeStyles = {
-  sm: 'h-4 w-4',
-  md: 'h-6 w-6',
-  lg: 'h-8 w-8',
+  sm: 'text-sm gap-[3px]',
+  md: 'text-base gap-1',
+  lg: 'text-xl gap-1.5',
 };
 
+/**
+ * Editorial spinner — three serif periods, not a circular spinner. Each
+ * dot pulses in sequence: "… thinking".
+ */
 function Spinner({ size = 'md', className }: SpinnerProps) {
   return (
-    <svg
-      className={cn('animate-spin text-primary-600', sizeStyles[size], className)}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
+    <span
       role="status"
       aria-label="Loading"
+      className={cn(
+        'inline-flex items-end font-serif leading-none text-ink-muted',
+        sizeStyles[size],
+        className,
+      )}
     >
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
+      <span
+        aria-hidden="true"
+        className="motion-safe:animate-[editorial-ellipsis_1400ms_ease-in-out_infinite]"
+        style={{ animationDelay: '0ms' }}
+      >
+        •
+      </span>
+      <span
+        aria-hidden="true"
+        className="motion-safe:animate-[editorial-ellipsis_1400ms_ease-in-out_infinite]"
+        style={{ animationDelay: '200ms' }}
+      >
+        •
+      </span>
+      <span
+        aria-hidden="true"
+        className="motion-safe:animate-[editorial-ellipsis_1400ms_ease-in-out_infinite]"
+        style={{ animationDelay: '400ms' }}
+      >
+        •
+      </span>
+    </span>
   );
 }
 
