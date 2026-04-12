@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { User } from '../types/user';
 import { api } from '../lib/api';
+import { useCardStore } from './cardStore';
 
 interface AuthState {
   user: User | null;
@@ -35,6 +36,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // ignore errors
     }
+    useCardStore.getState().reset();
+    localStorage.removeItem('recall-streak');
     set({ user: null, isAuthenticated: false });
   },
 }));

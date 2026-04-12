@@ -157,6 +157,7 @@ export default function CardFormPage() {
               }}
               error={errors.title}
               required
+              maxLength={200}
             />
 
             <div>
@@ -166,6 +167,7 @@ export default function CardFormPage() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 list="category-options"
+                maxLength={50}
               />
               <datalist id="category-options">
                 {uniqueCategories.map((cat) => (
@@ -185,6 +187,7 @@ export default function CardFormPage() {
               error={errors.content}
               required
               className="min-h-[200px]"
+              maxLength={10000}
             />
 
             <p className="small-caps-sm text-ink-muted">

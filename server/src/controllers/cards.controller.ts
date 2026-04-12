@@ -5,6 +5,17 @@ import { ReviewPerformance } from '../types';
 
 const VALID_PERFORMANCES: ReviewPerformance[] = ['forgot', 'struggled', 'gotit', 'mastered'];
 
+const MAX_TITLE_LENGTH = 200;
+const MAX_CATEGORY_LENGTH = 50;
+const MAX_CONTENT_LENGTH = 10000;
+
+function validateCardLengths(title?: string, category?: string, content?: string): string | null {
+  if (title && title.length > MAX_TITLE_LENGTH) return `Title must be ${MAX_TITLE_LENGTH} characters or less`;
+  if (category && category.length > MAX_CATEGORY_LENGTH) return `Category must be ${MAX_CATEGORY_LENGTH} characters or less`;
+  if (content && content.length > MAX_CONTENT_LENGTH) return `Content must be ${MAX_CONTENT_LENGTH} characters or less`;
+  return null;
+}
+
 export async function getCards(req: Request, res: Response): Promise<void> {
   const cards = await cardsDb.findAllByUserId(req.params.userId);
   res.json(cards);
@@ -23,6 +34,12 @@ export async function createCard(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  const lengthError = validateCardLengths(title, category, content);
+  if (lengthError) {
+    res.status(400).json({ message: lengthError, status: 400 });
+    return;
+  }
+
   const card = await cardsDb.create(req.params.userId, { title, content, category });
   res.status(201).json(card);
 }
@@ -32,6 +49,12 @@ export async function updateCard(req: Request, res: Response): Promise<void> {
 
   if (title === undefined && category === undefined && content === undefined) {
     res.status(400).json({ message: 'At least one field (title, category, content) is required', status: 400 });
+    return;
+  }
+
+  const lengthError = validateCardLengths(title, category, content);
+  if (lengthError) {
+    res.status(400).json({ message: lengthError, status: 400 });
     return;
   }
 

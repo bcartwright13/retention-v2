@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
@@ -5,7 +6,19 @@ import { findOrCreateByGoogle } from '../db/users';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+
 export function googleLogin(_req: Request, res: Response): void {
+  const state = crypto.randomBytes(32).toString('hex');
+
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: config.isProduction,
+    sameSite: 'lax',
+    maxAge: FIVE_MINUTES_MS,
+    path: '/',
+  });
+
   const params = new URLSearchParams({
     client_id: config.googleClientId,
     redirect_uri: config.googleRedirectUri,
@@ -13,6 +26,7 @@ export function googleLogin(_req: Request, res: Response): void {
     scope: 'openid email profile',
     access_type: 'offline',
     prompt: 'consent',
+    state,
   });
 
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
@@ -20,7 +34,16 @@ export function googleLogin(_req: Request, res: Response): void {
 
 export async function googleCallback(req: Request, res: Response): Promise<void> {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
+    const storedState = req.cookies?.oauth_state;
+
+    res.clearCookie('oauth_state', { path: '/' });
+
+    if (!state || !storedState || state !== storedState) {
+      res.status(403).json({ message: 'Invalid OAuth state', status: 403 });
+      return;
+    }
+
     if (!code || typeof code !== 'string') {
       res.status(400).json({ message: 'Missing authorization code', status: 400 });
       return;

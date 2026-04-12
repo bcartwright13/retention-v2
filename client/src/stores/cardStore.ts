@@ -14,6 +14,7 @@ interface CardState {
   updateCard: (id: string, input: CardUpdateInput) => Promise<Card>;
   deleteCard: (id: string) => Promise<void>;
   reviewCard: (id: string, performance: ReviewPerformance) => Promise<Card>;
+  reset: () => void;
 }
 
 export const useCardStore = create<CardState>((set, get) => ({
@@ -84,5 +85,9 @@ export const useCardStore = create<CardState>((set, get) => ({
       dueCards: get().dueCards.filter(c => c.id !== id),
     });
     return updated;
+  },
+
+  reset: () => {
+    set({ cards: [], dueCards: [], isLoading: false, error: null });
   },
 }));

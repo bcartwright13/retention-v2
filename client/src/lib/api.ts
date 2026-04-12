@@ -12,8 +12,15 @@ class ApiClient {
     });
 
     if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const SAFE_MESSAGES: Record<number, string> = {
+        400: 'Invalid request. Please check your input.',
+        401: 'Please sign in to continue.',
+        403: 'You don\'t have permission to do that.',
+        404: 'The requested resource was not found.',
+      };
       const error: ApiError = {
-        message: (await res.json().catch(() => ({}))).message || res.statusText,
+        message: SAFE_MESSAGES[res.status] || body.message || 'Something went wrong. Please try again.',
         status: res.status,
       };
       throw error;

@@ -1,12 +1,10 @@
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useAuthStore } from '../stores/authStore';
 import { Button } from '../components/ui/Button';
 import { Spinner } from '../components/ui/Spinner';
 
 export default function LoginPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -79,17 +77,6 @@ export default function LoginPage() {
               <span>enter with google</span>
             </Button>
 
-            <Button
-              variant="ghost"
-              size="lg"
-              className="w-full justify-center"
-              onClick={async () => {
-                await useAuthStore.getState().login();
-                navigate('/');
-              }}
-            >
-              continue as a guest
-            </Button>
           </div>
         </div>
       </div>
