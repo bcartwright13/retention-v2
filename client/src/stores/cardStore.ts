@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Card, CardCreateInput, CardUpdateInput, ReviewPerformance } from '../types/card';
-import { mockApi } from '../lib/mocks';
+import { api } from '../lib/api';
+import { useAuthStore } from './authStore';
 
 interface CardState {
   cards: Card[];
@@ -22,10 +23,11 @@ export const useCardStore = create<CardState>((set, get) => ({
   error: null,
 
   fetchCards: async () => {
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) throw new Error('Not authenticated');
     set({ isLoading: true, error: null });
     try {
-      // TODO: Replace with api.get<Card[]>(`/api/users/${userId}/cards`)
-      const cards = await mockApi.getCards();
+      const cards = await api.get<Card[]>(`/api/users/${userId}/cards`);
       set({ cards, isLoading: false });
     } catch (e) {
       set({ error: (e as Error).message || 'Failed to fetch cards', isLoading: false });
@@ -33,10 +35,11 @@ export const useCardStore = create<CardState>((set, get) => ({
   },
 
   fetchDueCards: async () => {
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) throw new Error('Not authenticated');
     set({ isLoading: true, error: null });
     try {
-      // TODO: Replace with api.get<Card[]>(`/api/users/${userId}/cards/due`)
-      const dueCards = await mockApi.getDueCards();
+      const dueCards = await api.get<Card[]>(`/api/users/${userId}/cards/due`);
       set({ dueCards, isLoading: false });
     } catch (e) {
       set({ error: (e as Error).message || 'Failed to fetch due cards', isLoading: false });
@@ -44,15 +47,17 @@ export const useCardStore = create<CardState>((set, get) => ({
   },
 
   createCard: async (input) => {
-    // TODO: Replace with api.post<Card>(`/api/users/${userId}/cards`, input)
-    const card = await mockApi.createCard(input);
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) throw new Error('Not authenticated');
+    const card = await api.post<Card>(`/api/users/${userId}/cards`, input);
     set({ cards: [...get().cards, card] });
     return card;
   },
 
   updateCard: async (id, input) => {
-    // TODO: Replace with api.put<Card>(`/api/users/${userId}/cards/${id}`, input)
-    const updated = await mockApi.updateCard(id, input);
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) throw new Error('Not authenticated');
+    const updated = await api.put<Card>(`/api/users/${userId}/cards/${id}`, input);
     set({
       cards: get().cards.map(c => c.id === id ? updated : c),
       dueCards: get().dueCards.map(c => c.id === id ? updated : c),
@@ -61,8 +66,9 @@ export const useCardStore = create<CardState>((set, get) => ({
   },
 
   deleteCard: async (id) => {
-    // TODO: Replace with api.del(`/api/users/${userId}/cards/${id}`)
-    await mockApi.deleteCard(id);
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) throw new Error('Not authenticated');
+    await api.del(`/api/users/${userId}/cards/${id}`);
     set({
       cards: get().cards.filter(c => c.id !== id),
       dueCards: get().dueCards.filter(c => c.id !== id),
@@ -70,8 +76,9 @@ export const useCardStore = create<CardState>((set, get) => ({
   },
 
   reviewCard: async (id, performance) => {
-    // TODO: Replace with api.patch<Card>(`/api/users/${userId}/cards/${id}/review`, { performance })
-    const updated = await mockApi.reviewCard(id, performance);
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) throw new Error('Not authenticated');
+    const updated = await api.patch<Card>(`/api/users/${userId}/cards/${id}/review`, { performance });
     set({
       cards: get().cards.map(c => c.id === id ? updated : c),
       dueCards: get().dueCards.filter(c => c.id !== id),
