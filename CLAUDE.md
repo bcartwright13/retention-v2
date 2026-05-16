@@ -11,10 +11,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 retention-v2/
 ├── client/    # React 19 + TypeScript frontend (Vite)
-└── server/    # Node.js + TypeScript backend (Express)
+├── server/    # Node.js + TypeScript backend (Express)
+└── spec.md    # Original product spec (source of truth for requirements)
 ```
 
 See `client/CLAUDE.md` and `server/CLAUDE.md` for stack-specific commands and conventions.
+
+## Running Locally
+
+The full stack has three pieces; bring them up in order:
+
+```bash
+# 1. Postgres (auto-runs server/migrations/*.sql on first boot)
+cd server/docker && docker compose up -d
+
+# 2. Server (http://localhost:3001) — needs server/.env (see server/CLAUDE.md)
+cd server && npm run dev
+
+# 3. Client (http://localhost:5173) — Vite proxies /api → :3001
+cd client && npm run dev
+```
 
 ## Tech Stack
 
@@ -79,3 +95,13 @@ DELETE /api/users/:userId/cards/:id
 Retention Area: fetch cards where `nextReview <= now` → show Title/Category → "Show Answer" → reveal Content → user picks Forgot / Struggled / Got it! / Mastered → update level + nextReview.
 
 Empty state: show "You're all caught up!" with total card count and next upcoming review date.
+
+## Cross-cutting Architecture
+
+A few things span both `client/` and `server/` and are easy to miss:
+
+- **Auth chain (server):** `authenticate` middleware reads the `token` HTTP-only cookie, verifies the JWT, loads the user, and sets `req.user`. `authorizeUser` then asserts that the `:userId` URL param matches `req.user.id`. The `:userId` in the URL is a sanity check — the session is the source of truth.
+- **Nested card routes:** `cardRouter` is mounted at `/api/users/:userId/cards` and uses `Router({ mergeParams: true })` so `req.params.userId` is visible inside it.
+- **Scheduler is duplicated:** authoritative logic lives in `server/src/services/retention.ts`; `client/src/lib/scheduler.ts` mirrors it for optimistic UI updates. Any change to the level/interval table must be applied to both files.
+- **Dev proxy:** `client/vite.config.ts` proxies `/api` → `http://localhost:3001`, so the client always calls relative paths (e.g. `fetch('/api/users/...')`) and cookies just work.
+- **DB schema:** snake_case in Postgres (`user_id`, `next_review`, …), camelCase in TypeScript. Mapping happens in `server/src/db/cards.ts` and `users.ts` — don't return raw rows from the pool.
