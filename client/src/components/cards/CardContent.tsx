@@ -70,6 +70,7 @@ function useBlocks(content: string): Block[] {
 
   while (i < lines.length) {
     const line = lines[i];
+    // Invariant: lang capture is strictly \w+ (alnum + underscore) — used as a label only, never executed.
     const fenceMatch = line.match(/^```(\w+)?\s*$/);
     if (fenceMatch) {
       flushParagraph();
@@ -94,6 +95,8 @@ function useBlocks(content: string): Block[] {
 
 // ─── Inline parser (code, bold, italic) ───────────────────────────────
 function renderInline(text: string): ReactNode {
+  // Bounded surface to neutralize any pathological backtracking on the alternation below.
+  if (text.length > 5000) return text;
   const tokens: ReactNode[] = [];
   const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
   let last = 0;

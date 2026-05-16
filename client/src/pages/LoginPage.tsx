@@ -71,6 +71,7 @@ export default function LoginPage() {
               size="lg"
               className="w-full justify-center"
               onClick={() => {
+                // Same-origin invariant: returnTo must start with '/' and not '//' (validated in authStore.login).
                 window.location.href = '/api/auth/google';
               }}
             >

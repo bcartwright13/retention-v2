@@ -31,7 +31,7 @@ export const useCardStore = create<CardState>((set, get) => ({
       const cards = await api.get<Card[]>(`/api/users/${userId}/cards`);
       set({ cards, isLoading: false });
     } catch (e) {
-      set({ error: (e as Error).message || 'Failed to fetch cards', isLoading: false });
+      set({ error: (e as { message?: string }).message || 'Failed to fetch cards', isLoading: false });
     }
   },
 
@@ -43,7 +43,7 @@ export const useCardStore = create<CardState>((set, get) => ({
       const dueCards = await api.get<Card[]>(`/api/users/${userId}/cards/due`);
       set({ dueCards, isLoading: false });
     } catch (e) {
-      set({ error: (e as Error).message || 'Failed to fetch due cards', isLoading: false });
+      set({ error: (e as { message?: string }).message || 'Failed to fetch due cards', isLoading: false });
     }
   },
 

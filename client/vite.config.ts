@@ -10,4 +10,8 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
     },
   },
+  build: {
+    // Do not emit sourcemaps to production — prevents leaking original source / file paths.
+    sourcemap: false,
+  },
 })

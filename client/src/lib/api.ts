@@ -7,6 +7,7 @@ class ApiClient {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'fetch',
         ...options.headers,
       },
     });
