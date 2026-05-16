@@ -16,7 +16,13 @@ export async function authenticate(
       return;
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
+    // C2: Pin algorithm + verify issuer/audience to prevent alg=none and
+    // cross-service token reuse.
+    const decoded = jwt.verify(token, config.jwtSecret, {
+      algorithms: ['HS256'],
+      issuer: config.jwtIssuer,
+      audience: config.jwtAudience,
+    }) as JwtPayload;
     const user = await findById(decoded.userId);
 
     if (!user) {

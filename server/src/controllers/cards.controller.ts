@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import * as cardsDb from '../db/cards';
 import { computeReview } from '../services/retention';
 import { ReviewPerformance } from '../types';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const VALID_PERFORMANCES: ReviewPerformance[] = ['forgot', 'struggled', 'gotit', 'mastered'];
 
@@ -9,65 +11,70 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_CATEGORY_LENGTH = 50;
 const MAX_CONTENT_LENGTH = 10000;
 
-function validateCardLengths(title?: string, category?: string, content?: string): string | null {
-  if (title && title.length > MAX_TITLE_LENGTH) return `Title must be ${MAX_TITLE_LENGTH} characters or less`;
-  if (category && category.length > MAX_CATEGORY_LENGTH) return `Category must be ${MAX_CATEGORY_LENGTH} characters or less`;
-  if (content && content.length > MAX_CONTENT_LENGTH) return `Content must be ${MAX_CONTENT_LENGTH} characters or less`;
-  return null;
+// M3: Strict schemas — `.strict()` rejects unknown keys (defense against
+// mass assignment) and the per-field rules replace the old manual length
+// checks in one pass.
+const CardCreate = z
+  .object({
+    title: z.string().min(1).max(MAX_TITLE_LENGTH),
+    content: z.string().min(1).max(MAX_CONTENT_LENGTH),
+    category: z.string().max(MAX_CATEGORY_LENGTH).optional(),
+  })
+  .strict();
+
+const CardUpdate = z
+  .object({
+    title: z.string().min(1).max(MAX_TITLE_LENGTH).optional(),
+    content: z.string().min(1).max(MAX_CONTENT_LENGTH).optional(),
+    category: z.string().max(MAX_CATEGORY_LENGTH).optional(),
+  })
+  .strict()
+  .refine((v) => v.title !== undefined || v.content !== undefined || v.category !== undefined, {
+    message: 'At least one field (title, category, content) is required',
+  });
+
+function badRequest(res: Response, message: string): void {
+  res.status(400).json({ message, status: 400 });
 }
 
-export async function getCards(req: Request, res: Response): Promise<void> {
+export const getCards = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const cards = await cardsDb.findAllByUserId(req.params.userId);
   res.json(cards);
-}
+});
 
-export async function getDueCards(req: Request, res: Response): Promise<void> {
+export const getDueCards = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const cards = await cardsDb.findDueByUserId(req.params.userId);
   res.json(cards);
-}
+});
 
-export async function createCard(req: Request, res: Response): Promise<void> {
-  const { title, content, category } = req.body;
-
-  if (!title || !content) {
-    res.status(400).json({ message: 'Title and content are required', status: 400 });
+export const createCard = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const parsed = CardCreate.safeParse(req.body);
+  if (!parsed.success) {
+    badRequest(res, parsed.error.issues[0]?.message ?? 'Invalid request body');
     return;
   }
 
-  const lengthError = validateCardLengths(title, category, content);
-  if (lengthError) {
-    res.status(400).json({ message: lengthError, status: 400 });
-    return;
-  }
-
-  const card = await cardsDb.create(req.params.userId, { title, content, category });
+  const card = await cardsDb.create(req.params.userId, parsed.data);
   res.status(201).json(card);
-}
+});
 
-export async function updateCard(req: Request, res: Response): Promise<void> {
-  const { title, category, content } = req.body;
-
-  if (title === undefined && category === undefined && content === undefined) {
-    res.status(400).json({ message: 'At least one field (title, category, content) is required', status: 400 });
+export const updateCard = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const parsed = CardUpdate.safeParse(req.body);
+  if (!parsed.success) {
+    badRequest(res, parsed.error.issues[0]?.message ?? 'Invalid request body');
     return;
   }
 
-  const lengthError = validateCardLengths(title, category, content);
-  if (lengthError) {
-    res.status(400).json({ message: lengthError, status: 400 });
-    return;
-  }
-
-  const card = await cardsDb.update(req.params.id, req.params.userId, { title, category, content });
+  const card = await cardsDb.update(req.params.id, req.params.userId, parsed.data);
   if (!card) {
     res.status(404).json({ message: 'Card not found', status: 404 });
     return;
   }
 
   res.json(card);
-}
+});
 
-export async function deleteCard(req: Request, res: Response): Promise<void> {
+export const deleteCard = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const deleted = await cardsDb.remove(req.params.id, req.params.userId);
   if (!deleted) {
     res.status(404).json({ message: 'Card not found', status: 404 });
@@ -75,16 +82,13 @@ export async function deleteCard(req: Request, res: Response): Promise<void> {
   }
 
   res.status(204).end();
-}
+});
 
-export async function reviewCard(req: Request, res: Response): Promise<void> {
-  const { performance } = req.body;
+export const reviewCard = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { performance } = req.body ?? {};
 
   if (!performance || !VALID_PERFORMANCES.includes(performance)) {
-    res.status(400).json({
-      message: `Invalid performance. Must be one of: ${VALID_PERFORMANCES.join(', ')}`,
-      status: 400,
-    });
+    badRequest(res, `Invalid performance. Must be one of: ${VALID_PERFORMANCES.join(', ')}`);
     return;
   }
 
@@ -98,4 +102,4 @@ export async function reviewCard(req: Request, res: Response): Promise<void> {
   const updated = await cardsDb.updateReview(req.params.id, req.params.userId, newLevel, nextReview);
 
   res.json(updated);
-}
+});
