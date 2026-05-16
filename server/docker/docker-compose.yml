@@ -4,7 +4,9 @@ services:
     container_name: recall-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # L4: Bind to loopback only so the dev DB is not reachable from other
+      # machines on the LAN (or, on some setups, the public internet).
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: recall
       POSTGRES_PASSWORD: recall
