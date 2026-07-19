@@ -96,6 +96,16 @@ Retention Area: fetch cards where `nextReview <= now` → show Title/Category �
 
 Empty state: show "You're all caught up!" with total card count and next upcoming review date.
 
+## Deployment (dev environment)
+
+Hosted on Render via the `render.yaml` blueprint at the repo root. Deployed as **one** Node web service — the server serves the built client (`client/dist`) as static files alongside the `/api` routes — plus one managed Postgres.
+
+This is a single-origin deploy on purpose, not just for simplicity: the auth cookie is `sameSite: 'strict'` (`server/src/controllers/auth.controller.ts`), the client only ever calls relative `/api/...` paths, and CSP is `connect-src 'self'`. Splitting client and server across two hosted URLs would require loosening one of those — a real security regression for a problem a single origin avoids entirely.
+
+Migrations (`server/migrations/*.sql`) are applied automatically at server boot via `server/src/db/migrate.ts` (tracked in a `schema_migrations` table, so re-running on every boot is a no-op once applied). This is the only migration path — local Docker Postgres no longer seeds schema via `docker-entrypoint-initdb.d`; it relies on the same boot-time runner.
+
+To deploy: connect the repo in Render, apply the `render.yaml` blueprint, then fill in `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (marked `sync: false`, so Render prompts for them rather than storing them in the repo). Those come from a Google Cloud Console OAuth Client ID configured with the deployed URL as both the authorized JavaScript origin and `/api/auth/google/callback` as the authorized redirect URI. If Render assigns a different subdomain than `recall`, update `CLIENT_URL`/`GOOGLE_REDIRECT_URI` in the service and the redirect URI in Google Console to match.
+
 ## Cross-cutting Architecture
 
 A few things span both `client/` and `server/` and are easy to miss:

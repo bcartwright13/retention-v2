@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -8,6 +9,7 @@ import authRouter from './routes/auth';
 import cardRouter from './routes/cards';
 import { errorHandler } from './middleware/errorHandler';
 import { csrfHeaderCheck } from './middleware/csrf';
+import { runMigrations } from './db/migrate';
 
 const app = express();
 
@@ -76,8 +78,31 @@ const apiLimiter = rateLimit({
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/users/:userId/cards', apiLimiter, cardRouter);
 
+// Single-origin deploy: the built client lives alongside the API behind one
+// URL (see root CLAUDE.md "Deployment"). This keeps the sameSite:'strict'
+// auth cookie and CSP connect-src:'self' working without a proxy/CORS layer.
+if (config.isProduction) {
+  const clientDist = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
+
 app.use(errorHandler);
 
-app.listen(config.port, () => {
-  console.log(`Server running on port ${config.port}`);
+async function main(): Promise<void> {
+  await runMigrations();
+  app.listen(config.port, () => {
+    console.log(`Server running on port ${config.port}`);
+  });
+}
+
+main().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
