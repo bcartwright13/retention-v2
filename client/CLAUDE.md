@@ -16,7 +16,7 @@ There are no tests yet.
 ## Stack
 
 - React 19 + TypeScript
-- Vite 8 (`/api` requests proxied to `http://localhost:3001` — see `vite.config.ts`)
+- Vite 8 (`/api` requests proxied to `http://localhost:3001` — see `vite.config.ts`; `build.sourcemap` is explicitly `false` to avoid leaking source paths in production)
 - Tailwind CSS v4 (via `@tailwindcss/vite`; design tokens in `@theme` in `src/index.css`)
 - React Router 7 (`react-router-dom`)
 - Zustand 5 (state management)
@@ -31,30 +31,31 @@ src/
 │   ├── ui/         # Design-system primitives: Button, Badge, CardSurface, Input,
 │   │               #   Textarea, Modal, Toast, Spinner, EmptyState, Rule,
 │   │               #   LevelIndicator, StatLine
-│   ├── layout/     # AppShell, Header, BottomNav, Container, AuthGuard, ThemeToggle
+│   ├── layout/     # AppShell, Header, BottomNav, Container, AuthGuard,
+│   │               #   ErrorBoundary, ThemeToggle
 │   ├── cards/      # CardContent (card body rendering)
 │   └── stats/      # StreakWidget
 ├── stores/         # Zustand stores: authStore, cardStore, toastStore, themeStore, streakStore
 ├── hooks/          # useAuth, useCards, useDueCards (thin wrappers over stores)
-├── lib/            # api.ts, mocks.ts, scheduler.ts, cn.ts, highlight.tsx
+├── lib/            # api.ts, scheduler.ts, cn.ts, highlight.tsx
 ├── types/          # card.ts, user.ts, api.ts (shared shapes mirroring root CLAUDE.md data model)
+├── test/           # mocks.ts — fixture data (mockUser, mockCards, mockApi); not currently
+│                   #   imported by app code or any test (no test runner is configured yet)
 └── styles/         # typography.css
 ```
 
 ### Routing
 
-`/login` is public. All other routes nest under `AuthGuard` (redirects to `/login` when unauthenticated) and `AppShell` (header + bottom nav layout): `/` (library), `/study`, `/cards/new`, `/cards/:id/edit`. `CardFormPage` handles both create and edit.
+`/login` is public. All other routes nest under `AuthGuard` (redirects to `/login` when unauthenticated), an `ErrorBoundary`, and `AppShell` (header + bottom nav layout): `/` (library), `/study`, `/cards/new`, `/cards/:id/edit`. `CardFormPage` handles both create and edit. A `<ToastContainer />` is mounted at the top level, outside the router.
 
-### Mock mode (current state — no real backend calls yet)
+### Talking to the server
 
-The app currently runs entirely on mock data:
+The app calls the real backend — there is no mock mode anymore:
 
-- `src/lib/mocks.ts` exports `mockApi`, an in-memory implementation of the full API (cards CRUD, due cards, review scheduling, user).
-- Stores call `mockApi` directly; each call site has a `// TODO: Replace with api...` comment naming the real endpoint to swap in.
-- `src/lib/api.ts` is a ready-to-use fetch client (`api.get/post/put/patch/del`) that sends `credentials: 'include'` and throws typed `ApiError` — use it when wiring the real backend.
-- Auth is simulated: `authStore` gates on a `recall_authenticated` sessionStorage flag; "login" just loads the mock user.
-
-When connecting the real server, replace the `mockApi` calls in the stores rather than changing components — components only talk to stores/hooks.
+- `src/lib/api.ts` is the fetch client (`api.get/post/put/patch/del`). Every request sends `credentials: 'include'` and an `X-Requested-With: fetch` header (required by the server's CSRF check — don't drop it when adding new calls). Error bodies are mapped through a `SAFE_MESSAGES` table keyed by status code (400/401/403/404) so raw server error text isn't shown to users; unmapped errors fall back to `body.message` or a generic message.
+- `authStore` calls `GET /api/auth/me` to check session, redirects to `/api/auth/google` (with a same-origin-only `returnTo` guard against open-redirect payloads) to log in, and `POST /api/auth/logout` to log out.
+- `cardStore` calls the full cards API (`GET/POST /api/users/:userId/cards`, `GET .../due`, `PUT/DELETE .../:id`, `PATCH .../:id/review`), reading `userId` from `useAuthStore.getState().user?.id`.
+- `src/test/mocks.ts` still holds an in-memory `mockApi` fixture from the earlier mock-data phase, but nothing imports it today — treat it as inert unless/until a test suite is added.
 
 ### Scheduling display helpers
 
